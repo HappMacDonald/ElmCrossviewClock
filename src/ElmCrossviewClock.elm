@@ -17,23 +17,45 @@ fontSize : Int
 fontSize =
   24
 
--- shrunkSpace : String
--- shrunkSpace =
---     String.repeat 1 spaceAtom
+
+red : Element.Color
+red =
+  Element.rgb 1 0 0
 
 
-normalSlot : String -> Element msg
-normalSlot char =
+green : Element.Color
+green =
+  Element.rgb 0 1 0
+
+
+white : Element.Color
+white =
+  Element.rgb 1 1 1
+
+
+slot : Element.Color -> Int -> String -> Element msg
+slot color width char =
     Element.el
-      [ Element.width ( Element.px (fontSize*4//7) ) 
-      , Font.center
+      [ Element.width ( Element.px width ) 
+      , Font.alignLeft
+      , Font.color white
       ]
       ( Element.text char )
 
 
--- wideSpace : String
--- wideSpace =
---     String.repeat 3 spaceAtom
+narrowSlot : String -> Element msg
+narrowSlot char =
+    slot red (fontSize*3//7) char
+
+
+normalSlot : String -> Element msg
+normalSlot char =
+    slot white (fontSize*4//7) char
+
+
+wideSlot : String -> Element msg
+wideSlot char =
+    slot green (fontSize*5//7) char
 
 
 gutterSlot : Element msg
@@ -41,6 +63,25 @@ gutterSlot =
     Element.el
       [ Element.width ( Element.px (fontSize * 3))]
       Element.none
+
+
+testSlot : List Position -> Int -> Int -> String -> Element msg
+testSlot positions mainRow mainColumn character =
+  if List.any
+    (\{row,start} ->
+      row == mainRow && start == mainColumn
+    )
+    positions
+  then narrowSlot character
+  else
+    if List.any
+      (\{row,start,length} ->
+        row == mainRow && (start+length-1) == mainColumn
+      )
+      positions
+    then wideSlot character
+    else normalSlot character
+
 
 
 
@@ -67,8 +108,8 @@ type alias Position =
 
 textBlock : List String
 textBlock =
-  [ "IT'STWENTYHALFONETWOTHREE"
-  , "FOURFIVESIXSEVENEIGHTNINE"
+  [ "IT'STWENTYHALFTHREEONETWO"
+  , "EIGHTFOURSEVENFIVESIXNINE"
   , "TENQELEVENTWELVELTHIRTEEN"
   , "FOURTEENA QUARTERASIXTEEN"
   , "SEVENTEENEIGHTEENNINETEEN"
@@ -101,49 +142,49 @@ wordPositions word =
 
     NumberMinuteWord 1 ->
       { row = 0
-      , start = 14
+      , start = 19
       , length = 3
       }
           
     NumberMinuteWord 2 ->
       { row = 0
-      , start = 17
+      , start = 22
       , length = 3
       }
           
     NumberMinuteWord 3 ->
       { row = 0
-      , start = 20
+      , start = 14
       , length = 5
       }
           
     NumberMinuteWord 4 ->
       { row = 1
-      , start = 0
+      , start = 5
       , length = 4
       }
           
     NumberMinuteWord 5 ->
       { row = 1
-      , start = 4
+      , start = 14
       , length = 4
       }
           
     NumberMinuteWord 6 ->
       { row = 1
-      , start = 8
+      , start = 18
       , length = 3
       }
           
     NumberMinuteWord 7 ->
       { row = 1
-      , start = 11
+      , start = 9
       , length = 5
       }
           
     NumberMinuteWord 8 ->
       { row = 1
-      , start = 16
+      , start = 0
       , length = 5
       }
           
@@ -485,6 +526,11 @@ view model =
     words =
       nowToWords model
 
+    positions =
+      words
+      |>List.map
+          wordPositions
+
   in
     Element.layout
       [ Element.width Element.fill
@@ -503,14 +549,17 @@ view model =
         , Element.centerY
         ]
         ( textBlock
-        |>List.map
-            (\line ->
-                line
-                |>String.split ""
-                |>List.map normalSlot
-                |>(\lineList ->
-                    lineList ++ [gutterSlot] ++ lineList
-                )
+        |>List.indexedMap
+            (\row line ->
+                List.concat
+                [ line
+                  |>String.split ""
+                  |>List.indexedMap ( testSlot positions row )
+                , [gutterSlot]
+                , line
+                  |>String.split ""
+                  |>List.map normalSlot
+                ]                
                 |>Element.row
                   [ Element.centerX
                   , Element.centerY
